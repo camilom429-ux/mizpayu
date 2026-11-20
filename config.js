@@ -3,5 +3,5 @@
  *  La encuentras en: Implementar → Administrar implementaciones → URL de la aplicación web.
  */
 window.MIZPA_CONFIG = {
-  api: 'PEGA_AQUI_LA_URL_DE_TU_APLICACION_WEB/exec'
+  api: 'https://script.google.com/macros/s/AKfycbyL9MeHPKeUtmJFj6YOALxSO6Qe020r8OlfHPe6-8YBKfo8z8Z9x_lxeVoC1lT64uD-/exec'
 };
