@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>MIZPA</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#4f46e5">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="MIZPA">
+  <style>
+    html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    #ld { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+      background: radial-gradient(circle at 30% 20%, #4338ca, #1e1b4b 70%); color: #e0e7ff; text-align: center; padding: 24px; }
+    #ld img { width: 96px; height: 96px; border-radius: 26px; box-shadow: 0 18px 40px rgba(0,0,0,.35); animation: lat 1.6s ease-in-out infinite; }
+    #ld h1 { margin: 0; font-size: 1.6rem; letter-spacing: .12em; color: #fff; }
+    #ld p { margin: 0; font-size: .92rem; opacity: .85; max-width: 320px; line-height: 1.5; }
+    #ld button { margin-top: 10px; border: 0; border-radius: 12px; padding: 12px 22px; font-weight: 800; background: #fff; color: #4338ca; font-size: .95rem; }
+    @keyframes lat { 50% { transform: scale(1.06); } }
+  </style>
+</head>
+<body>
+  <div id="ld">
+    <img src="icon-192.png" alt="">
+    <h1>MIZPA</h1>
+    <p id="ld-msg">Abriendo...</p>
+  </div>
+  <script src="config.js"></script>
+  <script>
+  /*  Cargador de la app instalable:
+   *  · Abre al instante las pantallas guardadas en el celular (funciona sin señal).
+   *  · La primera vez (o si no hay nada guardado) las descarga del servidor.
+   *  · Las actualizaciones las baja la misma app por detrás (se aplican al reabrir).
+   */
+  (function () {
+    var API = (window.MIZPA_CONFIG || {}).api || '';
+    var msg = document.getElementById('ld-msg');
+    var error = function (t) { msg.innerHTML = t + '<br><button onclick="location.reload()">Reintentar</button>'; };
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+    if (!/\/exec$/.test(API)) { msg.innerHTML = 'Falta configurar la dirección del sistema en <b>config.js</b>.'; return; }
+
+    function abrir(html, v) {
+      var inj = '<script>window.MIZPA_API=' + JSON.stringify(API) + ';window.MIZPA_V=' + JSON.stringify(v || '') + ';<\/script>' +
+        '<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#4f46e5"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">';
+      html = html.replace(/<head>/i, '<head>' + inj);
+      document.open(); document.write(html); document.close();
+    }
+    function guardar(html) {
+      if (!window.caches) return Promise.resolve();
+      return caches.open('mizpa-app').then(function (c) { return c.put('app.html', new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })); }).catch(function () {});
+    }
+    function descargar() {
+      msg.textContent = 'Descargando la app (solo la primera vez)...';
+      return fetch(API + '?app=1', { cache: 'no-store', redirect: 'follow' })
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          if (!j || !j.html) throw new Error('sin datos');
+          try { localStorage.setItem('mizpa_app_v', j.v); } catch (e) {}
+          return guardar(j.html).then(function () { abrir(j.html, j.v); });
+        });
+    }
+    var leer = window.caches
+      ? caches.open('mizpa-app').then(function (c) { return c.match('app.html'); }).then(function (r) { return r ? r.text() : null; }).catch(function () { return null; })
+      : Promise.resolve(null);
+    leer.then(function (html) {
+      if (html) return abrir(html, (function () { try { return localStorage.getItem('mizpa_app_v') || ''; } catch (e) { return ''; } })());
+      if (!navigator.onLine) return error('La primera vez necesitas <b>internet</b> para abrir la app.');
+      descargar().catch(function () { error('No se pudo descargar la app. Revisa tu internet.'); });
+    });
+  })();
+  </script>
+</body>
+</html>
